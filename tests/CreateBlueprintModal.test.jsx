@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import CreateBlueprintModal from '../src/components/CreateBlueprintModal.jsx'
 
 vi.mock('../src/hooks/usePost.js', () => {
@@ -21,7 +21,7 @@ describe('CreateBlueprintModal', () => {
   it('permite escribir en los inputs de autor y nombre', () => {
     render(<CreateBlueprintModal isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />)
 
-    const authorInput = screen.getAllByRole('textbox')[0] // El primero suele ser un type="text"
+    const authorInput = screen.getAllByRole('textbox')[0] 
     fireEvent.change(authorInput, { target: { value: 'pepo' } })
     
     expect(authorInput.value).toBe('pepo')
