@@ -16,7 +16,6 @@ export const fetchBlueprint = createAsyncThunk('blueprints/fetchBlueprint', asyn
   return res.data.data
 })
 
-
 export const addPointOptimistic = createAsyncThunk(
   'blueprints/addPoint',
   async ({ author, name, point }, { rejectWithValue }) => {
@@ -55,6 +54,16 @@ const slice = createSlice({
   reducers: {
     showAllInTable: (state) => {
       state.searchResults = state.allItems;
+    },
+    syncBlueprintPoints: (state, action) => {
+      if (state.current) {
+        const payload = action.payload;
+        if (payload.points) {
+          state.current.points = payload.points;
+        } else if (payload.x !== undefined && payload.y !== undefined) {
+          state.current.points.push(payload);
+        }
+      }
     }
   },
   extraReducers: (builder) => {
@@ -107,7 +116,7 @@ const slice = createSlice({
   },
 })
 
-export const { showAllInTable } = slice.actions
+export const { showAllInTable, syncBlueprintPoints } = slice.actions
 
 const selectAllItems = (state) => state.blueprints.allItems;
 export const selectTop5Blueprints = createSelector(
