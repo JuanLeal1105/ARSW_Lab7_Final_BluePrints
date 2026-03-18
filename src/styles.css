@@ -1,0 +1,87 @@
+/* src/index.css */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+  color: #f8fafc;
+  background-color: #0f172a;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Tarjetas (Cards) */
+.card {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Botones */
+.btn {
+  background-color: #334155;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:hover { background-color: #475569; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn.primary { background-color: #3b82f6; }
+.btn.primary:hover { background-color: #2563eb; }
+
+/* Inputs y Formularios */
+.input {
+  width: 100%;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+/* Grillas */
+.grid { display: grid; }
+.cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+/* Tablas */
+table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+th { text-align: left; padding: 12px; border-bottom: 2px solid #334155; color: #94a3b8; font-weight: 600; }
+td { padding: 12px; border-bottom: 1px solid #1f2937; }
+tr:hover td { background-color: #0f172a; }
