@@ -59,6 +59,7 @@ export default function BlueprintDetailPage() {
 
   const handleCanvasClick = (coords) => {
     setNewPoints([...newPoints, coords])
+    dispatch(syncBlueprintPoints(coords))
 
     if (tech === 'stomp' && stompRef.current?.connected) {
       stompRef.current.publish({ destination: '/app/draw', body: JSON.stringify({ author, name, point: coords }) })
