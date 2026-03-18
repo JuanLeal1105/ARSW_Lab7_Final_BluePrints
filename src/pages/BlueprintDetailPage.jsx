@@ -3,9 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchBlueprint, addPointOptimistic, syncBlueprintPoints } from '../features/blueprints/blueprintsSlice.js'
 import BlueprintCanvas from '../components/BlueprintCanvas.jsx'
-
 import { createSocket } from '../lib/socketIoClient.js'
-import { createStompClient, subscribeBlueprint } from '../lib/stompClient.js'
 
 export default function BlueprintDetailPage() {
   const { author, name } = useParams()
@@ -16,54 +14,38 @@ export default function BlueprintDetailPage() {
   const [newPoints, setNewPoints] = useState([])
   
   const [tech, setTech] = useState('socketio') 
-  const stompRef = useRef(null)
   const socketRef = useRef(null)
-  const unsubRef = useRef(null)
 
   useEffect(() => {
     dispatch(fetchBlueprint({ author, name }))
   }, [author, name, dispatch])
 
   useEffect(() => {
-    unsubRef.current?.(); unsubRef.current = null
-    stompRef.current?.deactivate?.(); stompRef.current = null
     socketRef.current?.disconnect?.(); socketRef.current = null
 
-    if (tech === 'stomp') {
-      const client = createStompClient()
-      stompRef.current = client
-      client.onConnect = () => {
-        unsubRef.current = subscribeBlueprint(client, author, name, (upd) => {
-          dispatch(syncBlueprintPoints(upd))
-        })
-      }
-      client.activate()
-    } else if (tech === 'socketio') {
-      const s = createSocket()
+    if (tech === 'socketio') {
+      const s = createSocket() 
       socketRef.current = s
       const room = `blueprints.${author}.${name}`
       
       s.emit('join-room', room)
       
-      s.on('blueprint-update', (upd) => {
-        dispatch(syncBlueprintPoints(upd))
+      s.on('blueprint-update', (updPoint) => {
+        dispatch(syncBlueprintPoints(updPoint))
       })
     }
 
     return () => {
-      unsubRef.current?.(); unsubRef.current = null
-      stompRef.current?.deactivate?.()
       socketRef.current?.disconnect?.()
     }
   }, [tech, author, name, dispatch])
+
 
   const handleCanvasClick = (coords) => {
     setNewPoints([...newPoints, coords])
     dispatch(syncBlueprintPoints(coords))
 
-    if (tech === 'stomp' && stompRef.current?.connected) {
-      stompRef.current.publish({ destination: '/app/draw', body: JSON.stringify({ author, name, point: coords }) })
-    } else if (tech === 'socketio' && socketRef.current?.connected) {
+    if (tech === 'socketio' && socketRef.current?.connected) {
       const room = `blueprints.${author}.${name}`
       socketRef.current.emit('draw-event', { room, author, name, point: coords })
     }
@@ -87,7 +69,6 @@ export default function BlueprintDetailPage() {
   )
 
   if (!blueprint) return null
-  const allPointsToRender = [...(blueprint.points || []), ...newPoints]
 
   return (
     <div className="card" style={{ position: 'relative' }}>
@@ -105,7 +86,6 @@ export default function BlueprintDetailPage() {
           >
             <option value="none">Ninguna (Solo REST)</option>
             <option value="socketio">Socket.IO (Node)</option>
-            <option value="stomp">STOMP (Spring)</option>
           </select>
         </div>
 

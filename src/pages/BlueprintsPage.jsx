@@ -37,45 +37,62 @@ export default function BlueprintsPage() {
         })
     }
   }
+  const totalPuntosAutor = blueprints.reduce((acumulador, bp) => {
+    return acumulador + (bp.points?.length || 0)
+  }, 0)
 
   return (
     <div className="card" style={{ position: 'relative' }}>
-      <h2 style={{ marginTop: 0 }}>Gestión de Blueprints</h2>
-      <form onSubmit={handleSearch} className="grid cols-2" style={{ gap: '16px', marginBottom: '24px' }}>
-        <div>
-          <label>Buscar por Autor</label>
-          <input className="input" value={authorInput} onChange={(e) => setAuthorInput(e.target.value)} placeholder="Ej: john" />
-        </div>
-        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button type="submit" className="btn primary" disabled={listStatus === 'loading'}>Search</button>
-          <button type="button" className="btn" onClick={handleListAll} disabled={listStatus === 'loading'}>List All</button>
-          <button type="button" className="btn" style={{ background: '#10b981' }} onClick={() => setIsModalOpen(true)}>+ Create New</button>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ marginTop: 0 }}>Blueprints Dashboard</h2>
+        <button className="btn primary" onClick={() => setIsModalOpen(true)}>+ Create New</button>
+      </div>
+
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        <input 
+          className="input" 
+          value={authorInput} 
+          onChange={(e) => setAuthorInput(e.target.value)} 
+          placeholder="Buscar por autor..." 
+        />
+        <button className="btn primary" type="submit">Search</button>
+        <button className="btn" type="button" onClick={handleListAll}>Show All</button>
       </form>
 
-      {listStatus === 'loading' && <div style={{ padding: '12px', background: '#e0f2fe', color: '#0369a1', borderRadius: '8px', marginBottom: '16px' }}>Cargando planos...</div>}
-      {listError && <div style={{ padding: '12px', background: '#fee2e2', color: '#991b1b', borderRadius: '8px', marginBottom: '16px' }}>Error: {listError}</div>}
+      {listStatus === 'failed' && <p style={{ color: '#ef4444' }}>Error: {listError}</p>}
+      {listStatus === 'loading' && <p>Loading...</p>}
 
-      <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-        <div>
-          <h3 style={{ marginTop: 0 }}>Resultados ({blueprints.length})</h3>
+      <div className="grid cols-3" style={{ gap: '24px' }}>
+        <div style={{ gridColumn: 'span 2' }}>
+          
+          {blueprints.length > 0 && authorInput && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: '#166534' }}>Panel del Autor: {authorInput}</h3>
+              <p style={{ margin: 0, fontWeight: 'bold', color: '#15803d' }}>
+                Total de puntos dibujados: {totalPuntosAutor}
+              </p>
+            </div>
+          )}
+
           {blueprints.length > 0 ? (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #334155' }}>Author</th>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #334155' }}>Blueprint</th>
-                  <th style={{ padding: '8px', borderBottom: '1px solid #334155' }}>Action</th>
+                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '12px 8px' }}>Name</th>
+                  <th style={{ padding: '12px 8px' }}>Author</th>
+                  <th style={{ padding: '12px 8px' }}>Points</th>
+                  <th style={{ padding: '12px 8px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {blueprints.map((bp) => (
-                  <tr key={`${bp.author}-${bp.name}`}>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #1f2937' }}>{bp.author}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #1f2937' }}>{bp.name}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #1f2937', display: 'flex', gap: '8px' }}>
-                      <button className="btn" onClick={() => navigate(`/blueprint/${bp.author}/${bp.name}`)}>Open</button>
-                      <button className="btn" style={{ background: '#ef4444' }} onClick={() => handleDelete(bp.author, bp.name)}>Delete</button>
+                {blueprints.map(bp => (
+                  <tr key={`${bp.author}-${bp.name}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '12px 8px' }}>{bp.name}</td>
+                    <td style={{ padding: '12px 8px' }}>{bp.author}</td>
+                    <td style={{ padding: '12px 8px' }}>{bp.points?.length || 0}</td>
+                    <td style={{ padding: '12px 8px', display: 'flex', gap: '8px' }}>
+                      <button className="btn primary" onClick={() => navigate(`/blueprint/${bp.author}/${bp.name}`)}>Open</button>
+                      <button className="btn" style={{ background: '#ef4444', color: 'white', border: 'none' }} onClick={() => handleDelete(bp.author, bp.name)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -84,7 +101,7 @@ export default function BlueprintsPage() {
           ) : (listStatus === 'succeeded' && <p>No data to show.</p>)}
         </div>
 
-        <div className="card" style={{ background: '#1e293b', padding: '16px' }}>
+        <div className="card" style={{ background: '#1e293b', padding: '16px', color: 'white' }}>
           <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Top 5 Blueprints</h3>
           <p style={{ fontSize: '12px', color: '#94a3b8' }}>(For point quantity)</p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -99,7 +116,7 @@ export default function BlueprintsPage() {
         </div>
       </div>
 
-      <CreateBlueprintModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => { setIsModalOpen(false); dispatch(fetchAllBlueprints()) }} />
+      <CreateBlueprintModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   )
 }
