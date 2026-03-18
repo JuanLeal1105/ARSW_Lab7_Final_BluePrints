@@ -133,7 +133,7 @@ export default function BlueprintDetailPage() {
           * Haz click en el lienzo para dibujar. No olvides presionar Guardar para persistirlos en la base de datos.
         </p>
         <BlueprintCanvas 
-          points={allPointsToRender} 
+          points={blueprint.points || []} 
           onCanvasClick={handleCanvasClick} 
         />
       </div>

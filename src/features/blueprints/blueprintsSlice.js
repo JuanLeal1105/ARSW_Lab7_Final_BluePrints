@@ -99,11 +99,11 @@ const slice = createSlice({
       })
 
       .addCase(addPointOptimistic.pending, (state, action) => {
-        const { point } = action.meta.arg
-        if (state.current) state.current.points.push(point)
+        // const { point } = action.meta.arg
+        // if (state.current) state.current.points.push(point)
       })
       .addCase(addPointOptimistic.rejected, (state) => {
-        if (state.current) state.current.points.pop()
+        // if (state.current) state.current.points.pop()
       })
 
       .addCase(deleteBlueprintOptimistic.pending, (state, action) => {
