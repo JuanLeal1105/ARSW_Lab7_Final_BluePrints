@@ -1,186 +1,179 @@
-# Lab – React Client for Blueprints (Redux + Axios + JWT)
+# El archivo de respuestas y documentacion se llama Answers.md
 
-> Basado en el cliente HTML/JS del repo de referencia, este laboratorio moderniza el _frontend_ con **React + Vite**, **Redux Toolkit**, **Axios** (con interceptores y JWT), **React Router** y pruebas con **Vitest + Testing Library**.
+# Lab P4 — BluePrints en Tiempo Real (Sockets & STOMP)
 
-## Objetivos de aprendizaje
+> **Repositorio:** `DECSIS-ECI/Lab_P4_BluePrints_RealTime-Sokets`  
+> **Front:** React + Vite (Canvas, CRUD, y selector de tecnología RT)  
+> **Backends guía (elige uno o compáralos):**
+> - **Socket.IO (Node.js):** https://github.com/DECSIS-ECI/example-backend-socketio-node-/blob/main/README.md
+> - **STOMP (Spring Boot):** https://github.com/DECSIS-ECI/example-backend-stopm/tree/main
 
-- Diseñar una SPA en React aplicando **componetización** y **Redux (reducers/slices)**.
-- Consumir APIs REST de Blueprints con **Axios** y manejar **estados de carga/errores**.
-- Integrar **autenticación JWT** con interceptores y rutas protegidas.
-- Aplicar buenas prácticas: estructura de carpetas, `.env`, linters, testing, CI.
+## 🎯 Objetivo del laboratorio
+Implementar **colaboración en tiempo real** para el caso de BluePrints. El Front consume la API CRUD de la Parte 3 (o equivalente) y habilita tiempo real usando **Socket.IO** o **STOMP**, para que múltiples clientes dibujen el mismo plano de forma simultánea.
 
-## Requisitos previos
+Al finalizar, el equipo debe:
+1. Integrar el Front con su **API CRUD** (listar/crear/actualizar/eliminar planos, y total de puntos por autor).
+2. Conectar el Front a un backend de **tiempo real** (Socket.IO **o** STOMP) siguiendo los repos guía.
+3. Demostrar **colaboración en vivo** (dos pestañas navegando el mismo plano).
 
-- Tener corriendo el backend de Blueprints de los **Labs 3 y 4** (APIs + seguridad).
-- Node.js 18+ y npm.
+---
 
-Ver la especificación de glosario clave, consulta las [Definiciones del laboratorio](./DEFINICIONES.md).
+## 🧩 Alcance y criterios funcionales
+- **CRUD** (REST):
+  - `GET /api/blueprints?author=:author` → lista por autor (incluye total de puntos).
+  - `GET /api/blueprints/:author/:name` → puntos del plano.
+  - `POST /api/blueprints` → crear.
+  - `PUT /api/blueprints/:author/:name` → actualizar.
+  - `DELETE /api/blueprints/:author/:name` → eliminar.
+- **Tiempo real (RT)** (elige uno):
+  - **Socket.IO** (rooms): `join-room`, `draw-event` → broadcast `blueprint-update`.
+  - **STOMP** (topics): `@MessageMapping("/draw")` → `convertAndSend(/topic/blueprints.{author}.{name})`.
+- **UI**:
+  - Canvas con **dibujo por clic** (incremental).
+  - Panel del autor: **tabla** de planos y **total de puntos** (`reduce`).
+  - Barra de acciones: **Create / Save/Update / Delete** y **selector de tecnología** (None / Socket.IO / STOMP).
+- **DX/Calidad**: código limpio, manejo de errores, README de equipo.
 
-## Endpoints esperados (ajústalos si tu backend quedo diferente)
+---
 
-- `GET /api/blueprints` → lista general o catálogo para derivar autores.
-- `GET /api/blueprints/{author}`
-- `GET /api/blueprints/{author}/{name}`
-- `POST /api/blueprints` (requiere JWT)
-- `POST /api/auth/login` → `{ token }`
+## 🏗️ Arquitectura (visión rápida)
 
-Configura la URL base en `.env`.
+```
+React (Vite)
+ ├─ HTTP (REST CRUD + estado inicial) ───────────────> Tu API (P3 / propia)
+ └─ Tiempo Real (elige uno):
+     ├─ Socket.IO: join-room / draw-event ──────────> Socket.IO Server (Node)
+     └─ STOMP: /app/draw -> /topic/blueprints.* ────> Spring WebSocket/STOMP
+```
 
-## Cómo arrancar
+**Convenciones recomendadas**  
+- **Plano como canal/sala**: `blueprints.{author}.{name}`  
+- **Payload de punto**: `{ x, y }`
 
+---
+
+## 📦 Repos guía (clona/consulta)
+- **Socket.IO (Node.js)**: https://github.com/DECSIS-ECI/example-backend-socketio-node-/blob/main/README.md  
+  - *Uso típico en el cliente:* `io(VITE_IO_BASE, { transports: ['websocket'] })`, `join-room`, `draw-event`, `blueprint-update`.
+- **STOMP (Spring Boot)**: https://github.com/DECSIS-ECI/example-backend-stopm/tree/main  
+  - *Uso típico en el cliente:* `@stomp/stompjs` → `client.publish('/app/draw', body)`; suscripción a `/topic/blueprints.{author}.{name}`.
+
+---
+
+## ⚙️ Variables de entorno (Front)
+Crea `.env.local` en la raíz del proyecto **Front**:
 ```bash
-npm install
-cp .env.example .env
-# edita .env con la URL del backend
+# REST (tu backend CRUD)
+VITE_API_BASE=http://localhost:8080
+
+# Tiempo real: apunta a uno u otro según el backend que uses
+VITE_IO_BASE=http://localhost:3001     # si usas Socket.IO (Node)
+VITE_STOMP_BASE=http://localhost:8080  # si usas STOMP (Spring)
+```
+En la UI, selecciona la tecnología en el **selector RT**.
+
+---
+
+## 🚀 Puesta en marcha
+
+### 1) Backend RT (elige uno)
+
+**Opción A — Socket.IO (Node.js)**  
+Sigue el README del repo guía:  
+https://github.com/DECSIS-ECI/example-backend-socketio-node-/blob/main/README.md
+```bash
+npm i
 npm run dev
+# expone: http://localhost:3001
+# prueba rápida del estado inicial:
+curl http://localhost:3001/api/blueprints/juan/plano-1
 ```
 
-Abre `http://localhost:5173`
-
-## Variables de entorno
-
-Crea un archivo `.env` en la raíz:
-
-```variable
-VITE_API_BASE_URL=http://localhost:8080/api
+**Opción B — STOMP (Spring Boot)**  
+Sigue el repo guía:  
+https://github.com/DECSIS-ECI/example-backend-stopm/tree/main
+```bash
+./mvnw spring-boot:run
+# expone: http://localhost:8080
+# endpoint WS (ej.): /ws-blueprints
 ```
 
-> **Tip:** en producción usa variables seguras o un _reverse proxy_.
-
-## Estructura
-
-```carpetas
-blueprints-react-lab/
-├─ src/
-│  ├─ components/
-│  ├─ features/blueprints/blueprintsSlice.js
-│  ├─ pages/
-│  ├─ services/apiClient.js   # axios + interceptores JWT
-│  ├─ store/index.js          # Redux Toolkit
-│  ├─ App.jsx, main.jsx, styles.css
-├─ tests/
-├─ .github/workflows/ci.yml
-├─ index.html, package.json, vite.config.js, README.md
+### 2) Front (este repo)
+```bash
+npm i
+npm run dev
+# http://localhost:5173
 ```
-
-## 📌 Requerimientos del laboratorio
-
-## 1. Canvas (lienzo)
-
-- Agregar un lienzo (Canvas) a la página.
-- Incluir un componente `BlueprintCanvas` con un identificador propio.
-- Definir dimensiones adecuadas (ej. `520×360`) para que no ocupe toda la pantalla pero permita dibujar los planos.
-
-## 2. Listar los planos de un autor
-
-- Permitir ingresar el nombre de un autor y consultar sus planos desde el backend (o mock).
-- Mostrar los resultados en una tabla con las siguientes columnas:
-  - Nombre del plano
-  - Número de puntos
-  - Botón `Open` para abrirlo
-
-## 3. Seleccionar un plano y graficarlo
-
-Al hacer clic en el botón `Open`, debe:
-
-- Actualizar un campo de texto con el nombre del plano actual.
-- Obtener los puntos del plano correspondiente.
-- Dibujar consecutivamente los segmentos de recta en el canvas y marcar cada punto.
-
-## 4. Servicios: `apimock` y `apiclient`
-
-- Implementar dos servicios con la misma interfaz:
-  - `apimock`: retorna datos de prueba desde memoria.
-  - `apiclient`: consume el API REST real con Axios.
-- La interfaz de ambos debe incluir los métodos:
-  - `getAll`
-  - `getByAuthor`
-  - `getByAuthorAndName`
-  - `create`
-- Habilitar el cambio entre `apimock` y `apiclient` con una sola línea de código:
-  - Definir un módulo `blueprintsService.js` que importe uno u otro según una variable en `.env`.
-  - Ejemplo en `.env` (Vite):
-
-```env
-VITE_USE_MOCK=true
-```
-
-- `VITE_USE_MOCK=true` usa el mock.
-- `VITE_USE_MOCK=false` usa el API real.
-
-## 5. Interfaz con React
-
-- El nombre del plano actual debe mostrarse en el DOM como parte del estado global (Redux).
-- Evitar manipular directamente el DOM; usar componentes y props/estado.
-
-## 6. Estilos
-
-- Agregar estilos para mejorar la presentación.
-- Se puede usar Bootstrap u otro framework CSS.
-- Ajustar la tabla, botones y tarjetas para acercarse al mock de referencia.
-
-## 7. Pruebas unitarias
-
-- Agregar pruebas con Vitest + Testing Library para validar:
-  - Render del canvas.
-  - Envío de formularios.
-  - Interacciones básicas con Redux (por ejemplo: dispatch de `fetchByAuthor`).
+En la interfaz: selecciona **Socket.IO** o **STOMP**, define `author` y `name`, abre **dos pestañas** y dibuja en el canvas (clics).
 
 ---
 
-### Notas rápidas y recomendaciones
+## 🔌 Protocolos de Tiempo Real (detalle mínimo)
 
-- Para el canvas en tests con jsdom: agregar un mock de `HTMLCanvasElement.prototype.getContext` en `tests/setup.js`.
-- Para usar `@testing-library/jest-dom` con Vitest: en `tests/setup.js` importar `import '@testing-library/jest-dom'` y asegurarse de que Vitest provea el global `expect` (configurar `vitest.config.js` con la opción `test: { globals: true, setupFiles: './tests/setup.js' }`).
-- Para la conmutación de servicios en Vite, usar `import.meta.env.VITE_USE_MOCK` para leer la variable en tiempo de ejecución.
+### A) Socket.IO
+- **Unirse a sala**
+  ```js
+  socket.emit('join-room', `blueprints.${author}.${name}`)
+  ```
+- **Enviar punto**
+  ```js
+  socket.emit('draw-event', { room, author, name, point: { x, y } })
+  ```
+- **Recibir actualización**
+  ```js
+  socket.on('blueprint-update', (upd) => { /* append points y repintar */ })
+  ```
 
-## 📌 Recomendaciones y actividades sugeridas para el exito del laboratorio
-
-1. **Redux avanzado**
-   - [ ] Agrega estados `loading/error` por _thunk_ y muéstralos en la UI.
-   - [ ] Implementa _memo selectors_ para derivar el top-5 de blueprints por cantidad de puntos.
-2. **Rutas protegidas**
-   - [ ] Crea un componente `<PrivateRoute>` y protege la creación/edición.
-3. **CRUD completo**
-   - [ ] Implementa `PUT /api/blueprints/{author}/{name}` y `DELETE ...` en el slice y en la UI.
-   - [ ] Optimistic updates (revertir si falla).
-4. **Dibujo interactivo**
-   - [ ] Reemplaza el `svg` por un lienzo donde el usuario haga _click_ para agregar puntos.
-   - [ ] Botón “Guardar” que envíe el blueprint.
-5. **Errores y _Retry_**
-   - [ ] Si `GET` falla, muestra un banner y un botón **Reintentar** que dispare el thunk.
-6. **Testing**
-   - [ ] Pruebas de `blueprintsSlice` (reducers puros).
-   - [ ] Pruebas de componentes con Testing Library (render, interacción).
-7. **CI/Lint/Format**
-   - [ ] Activa **GitHub Actions** (workflow incluido) → lint + test + build.
-8. **Docker (opcional)**
-   - [ ] Crea `Dockerfile` (+ `compose`) para front + backend.
-
-## Criterios de evaluación
-
-- Funcionalidad y cobertura de casos (30%)
-- Calidad de código y arquitectura (Redux, componentes, servicios) (25%)
-- Manejo de estado, errores, UX (15%)
-- Pruebas automatizadas (15%)
-- Seguridad (JWT/Interceptores/Rutas protegidas) (10%)
-- CI/Lint/Format (5%)
-
-## Scripts
-
-- `npm run dev` – servidor de desarrollo Vite
-- `npm run build` – build de producción
-- `npm run preview` – previsualizar build
-- `npm run lint` – ESLint
-- `npm run format` – Prettier
-- `npm test` – Vitest
+### B) STOMP
+- **Publicar punto**
+  ```js
+  client.publish({ destination: '/app/draw', body: JSON.stringify({ author, name, point }) })
+  ```
+- **Suscribirse a tópico**
+  ```js
+  client.subscribe(`/topic/blueprints.${author}.${name}`, (msg) => { /* append points y repintar */ })
+  ```
 
 ---
 
-### Extensiones propuestas del reto
+## 🧪 Casos de prueba mínimos
+- **Estado inicial**: al seleccionar plano, el canvas carga puntos (`GET /api/blueprints/:author/:name`).  
+- **Dibujo local**: clic en canvas agrega puntos y redibuja.  
+- **RT multi-pestaña**: con 2 pestañas, los puntos se **replican** casi en tiempo real.  
+- **CRUD**: Create/Save/Delete funcionan y refrescan la lista y el **Total** del autor.
 
-- **Redux Toolkit Query** para _caching_ de requests.
-- **MSW** para _mocks_ sin backend.
-- **Dark mode** y diseño responsive.
+---
 
-> Este proyecto es un punto de partida para que tus estudiantes evolucionen el cliente clásico de Blueprints a una SPA moderna con prácticas de la industria.
+## 📊 Entregables del equipo
+1. Código del Front integrado con **CRUD** y **RT** (Socket.IO o STOMP).  
+2. **Video corto** (≤ 90s) mostrando colaboración en vivo y operaciones CRUD.  
+3. **README del equipo**: setup, endpoints usados, decisiones (rooms/tópicos), y (opcional) breve comparativa Socket.IO vs STOMP.
+
+---
+
+## 🧮 Rúbrica sugerida
+- **Funcionalidad (40%)**: RT estable (join/broadcast), aislamiento por plano, CRUD operativo.  
+- **Calidad técnica (30%)**: estructura limpia, manejo de errores, documentación clara.  
+- **Observabilidad/DX (15%)**: logs útiles (conexión, eventos), health checks básicos.  
+- **Análisis (15%)**: hallazgos (latencia/reconexión) y, si aplica, pros/cons Socket.IO vs STOMP.
+
+---
+
+## 🩺 Troubleshooting
+- **Pantalla en blanco (Front)**: revisa consola; confirma `@vitejs/plugin-react` instalado y que `AppP4.jsx` esté en `src/`.  
+- **No hay broadcast**: ambas pestañas deben hacer `join-room` al **mismo** plano (Socket.IO) o suscribirse al **mismo tópico** (STOMP).  
+- **CORS**: en dev permite `http://localhost:5173`; en prod, **restringe orígenes**.  
+- **Socket.IO no conecta**: fuerza transporte WebSocket `{ transports: ['websocket'] }`.  
+- **STOMP no recibe**: verifica `brokerURL`/`webSocketFactory` y los prefijos `/app` y `/topic` en Spring.
+
+---
+
+## 🔐 Seguridad (mínimos)
+- Validación de payloads (p. ej., zod/joi).  
+- Restricción de orígenes en prod.  
+- Opcional: **JWT** + autorización por plano/sala.
+
+---
+
+## 📄 Licencia
+MIT (o la definida por el curso/equipo).
