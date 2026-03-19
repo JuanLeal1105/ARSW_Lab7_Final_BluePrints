@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import usePost from '../hooks/usePost.js'
+import { createSocket } from '../lib/socketIoClient.js'
 
 export default function CreateBlueprintModal({ isOpen, onClose, onSuccess }) {
   const [author, setAuthor] = useState('')
@@ -19,13 +20,17 @@ export default function CreateBlueprintModal({ isOpen, onClose, onSuccess }) {
         name, 
         points: pointsArray 
       })
+      const s = createSocket()
+      s.emit('dashboard-update')
+      setTimeout(() => s.disconnect(), 1000)
       
       alert('Blueprint creado exitosamente')
 
       setAuthor('')
       setName('')
       setPoints('[{"x": 10, "y": 10}]')
-      onSuccess() 
+
+      if (onSuccess) onSuccess() 
       
     } catch (err) {
       if (err instanceof SyntaxError) {

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchAllBlueprints, fetchByAuthor, selectTop5Blueprints, showAllInTable, deleteBlueprintOptimistic } from '../features/blueprints/blueprintsSlice.js'
 import CreateBlueprintModal from '../components/CreateBlueprintModal.jsx'
+import { createSocket } from '../lib/socketIoClient.js'
 
 export default function BlueprintsPage() {
   const navigate = useNavigate()
@@ -13,6 +14,20 @@ export default function BlueprintsPage() {
 
   const [authorInput, setAuthorInput] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const socketRef = useRef(null)
+
+  useEffect(() => {
+    socketRef.current = createSocket()
+    socketRef.current.on('refresh-dashboard', () => {
+      dispatch(fetchAllBlueprints())
+      if (authorInput) {
+        dispatch(fetchByAuthor(authorInput))
+      }
+    })
+
+    return () => socketRef.current?.disconnect()
+  }, [dispatch, authorInput])
 
   useEffect(() => {
     dispatch(fetchAllBlueprints())
@@ -31,15 +46,25 @@ export default function BlueprintsPage() {
     if (window.confirm(`¿Estás seguro de que deseas eliminar el plano ${name}?`)) {
       dispatch(deleteBlueprintOptimistic({ author, name }))
         .unwrap()
+        .then(() => {
+          socketRef.current?.emit('dashboard-update')
+        })
         .catch(() => {
           alert('Error al intentar eliminar. Revisa tus permisos o conexión.')
           dispatch(fetchAllBlueprints())
         })
     }
   }
+
   const totalPuntosAutor = blueprints.reduce((acumulador, bp) => {
     return acumulador + (bp.points?.length || 0)
   }, 0)
+
+  const handleModalSuccess = () => {
+    setIsModalOpen(false)
+    dispatch(fetchAllBlueprints())
+    if (authorInput) dispatch(fetchByAuthor(authorInput))
+  }
 
   return (
     <div className="card" style={{ position: 'relative' }}>
@@ -116,7 +141,11 @@ export default function BlueprintsPage() {
         </div>
       </div>
 
-      <CreateBlueprintModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <CreateBlueprintModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={handleModalSuccess} 
+      />
     </div>
   )
 }
