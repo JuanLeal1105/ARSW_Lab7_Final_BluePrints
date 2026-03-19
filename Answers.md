@@ -98,6 +98,9 @@ El sistema consta de tres componentes que deben ejecutarse en paralelo:
     npm run dev
     ```
   - Expone: http://localhost:5173
+ 
+### **Video de muestra. Sockets Funcionando**
+[![Watch the demo](https://img.youtube.com/vi/TpXhPHqDAxg/0.jpg)](https://youtu.be/TpXhPHqDAxg)
 
 ## **Parte 5. Pruebas y Aseguramiento de Calidad (Vitest)**
 
