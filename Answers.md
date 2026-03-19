@@ -27,20 +27,22 @@ docker compose up -d
 Lo anterior funciona debido a que dentro del Backend se tiene un `docker-compose.yml`. En dado caso que ya se tenga el conteneder corriendo, se puede obviar el comando anterior y proceder a correr el código.
 
 ## Parte 1. Arquitectura de Socket.IO
-Para garantizar que los trazos de un usuario no interfieran con los de otro que esté visualizando un plano diferente, implementamos una arquitectura basada en **Salas (Rooms)** de Socket.IO.
+Para garantizar que los trazos de un usuario no interfieran con los de otro que esté visualizando un plano diferente, implementamos una arquitectura basada en **Salas (Rooms)** de Socket.IO, complementada con eventos globales para el Dashboard.
 
 1. **Aislamiento por Plano:** Utilizamos una convención de nomenclatura estricta para las salas: `blueprints.{author}.{name}`.
 2. **Flujo de Eventos:**
    - **`join-room`**: Al entrar a la vista de detalle, el cliente emite este evento para suscribirse únicamente a los cambios de ese plano específico.
    - **`draw-event`**: Cuando el usuario hace clic en el canvas, emite este evento con el payload `{ room, author, name, point: { x, y } }`.
    - **`blueprint-update`**: El servidor recibe el punto y hace un *broadcast* (`socket.to(room).emit`) a todos los demás clientes en la sala, excluyendo al emisor original.
+   - **`dashboard-update` y `refresh-dashboard`:** Eventos de sincronización global. Si un usuario crea o elimina un plano desde la vista principal, se emite dashboard-update. El servidor retransmite refresh-dashboard a los demás usuarios para que actualicen sus tablas en tiempo real sin tener que recargar la página manualmente.
 
 ## Parte 2. Cambios en el Frontend (React)
 Para que el cliente consumiera tanto el CRUD como los WebSockets, realizamos las siguientes modificaciones estratégicas:
 - **Gestión de Conexión (`src/lib/socketIoClient.js`):** Se centralizó la lógica de instanciación de Socket.IO utilizando las variables de entorno (`VITE_IO_BASE`) para no contaminar los componentes de UI con URLs quemadas.
 - **Estado Global (`blueprintsSlice.js`):** Se añadió el reducer `syncBlueprintPoints`. Esto centraliza todos los puntos (tanto los locales recién dibujados como los entrantes por WebSockets) en una única fuente de verdad cronológica en Redux, evitando que las líneas se rendericen distorsionadas por desincronización de arrays.
 - **Vista de Detalle (`BlueprintDetailPage.jsx`):** Se integró el ciclo de vida de React (`useEffect`) con el de Socket.IO para unirse a la sala al montar el componente y desconectarse al desmontarlo. También gestiona la separación entre los puntos efímeros de la sesión y la acción de guardarlos permanentemente en la base de datos (REST).
-- **Panel del Autor (`BlueprintsPage.jsx`):** Se añadió lógica usando la función `reduce()` de JavaScript para calcular y renderizar dinámicamente el total histórico de puntos dibujados por un autor consultado.
+- **Panel del Autor (`BlueprintsPage.jsx`- `CreateBlueprintModal.jsx`):** Se conectó el Dashboard a Socket.IO. Ahora, al crear un nuevo plano exitosamente desde el modal o eliminar uno de la tabla, se dispara un evento global de socket. Esto causa que todos los demás clientes en red re-despachen sus peticiones REST (fetchAllBlueprints) de forma automática, manteniendo las listas sincronizadas.
+  - Se añadió lógica usando la función `reduce()` de JavaScript para calcular y renderizar dinámicamente el total histórico de puntos dibujados por un autor consultado.
 
 ### **Configuración de Variables de Entorno (`.env.local`)**
 Para que el frontend se comunique correctamente con los dos backends (Java y Node.js), se configuró un archivo `.env.local` en la raíz del proyecto Frontend. Este archivo separa las rutas de desarrollo y facilita la transición a producción:
@@ -70,6 +72,7 @@ Actúa exclusivamente como un Message Broker (enrutador de mensajes en memoria h
 1. No usa base de datos: No le importa la persistencia, de eso se encarga Java.
 2. Manejo de estado efímero: Mantiene en la memoria RAM un registro de qué socket.id (usuario) está suscrito a qué sala (blueprints.juan.plano-1).
 3. Distribución de baja latencia: Recibe coordenadas {x, y} de un emisor y las retransmite instantáneamente al resto de la sala, logrando la sensación de "tiempo real".
+4. Sincronización Global: Notifica a través de un broadcast masivo cuando ocurren cambios a nivel de arquitectura (creación/eliminación de planos) para forzar la actualización del Frontend basado en REST.
 
 ## **Parte 4. Puesta en Marcha (Cómo correr el proyecto)**
 El sistema consta de tres componentes que deben ejecutarse en paralelo:
