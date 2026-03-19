@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import * as reactRedux from 'react-redux'
 import BlueprintsPage from '../src/pages/BlueprintsPage.jsx'
 import { fetchByAuthor } from '../src/features/blueprints/blueprintsSlice.js'
+import * as socketIoClient from '../src/lib/socketIoClient.js'
 
 vi.mock('react-redux', async () => {
   const actual = await vi.importActual('react-redux')
@@ -18,9 +19,17 @@ vi.mock('../src/features/blueprints/blueprintsSlice.js', () => ({
   deleteBlueprintOptimistic: vi.fn()
 }))
 
+const mockSocket = {
+  emit: vi.fn(),
+  on: vi.fn(),
+  disconnect: vi.fn()
+}
+vi.mock('../src/lib/socketIoClient.js', () => ({
+  createSocket: vi.fn(() => mockSocket)
+}))
+
 describe('BlueprintsPage', () => {
   
-  // SOLUCIÓN: Limpiar el DOM y los mocks después de cada test
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
@@ -73,5 +82,21 @@ describe('BlueprintsPage', () => {
     fireEvent.change(screen.getByPlaceholderText(/Buscar por autor.../i), { target: { value: 'pepo' } })
     
     expect(screen.getByText(/Total de puntos dibujados: 3/i)).toBeInTheDocument()
+  })
+
+  it('se conecta al socket y escucha refresh-dashboard al montar', () => {
+    reactRedux.useDispatch.mockReturnValue(vi.fn())
+    reactRedux.useSelector.mockImplementation((selector) => 
+      selector({ blueprints: { searchResults: [], listStatus: 'idle', listError: null } })
+    )
+
+    render(
+      <BrowserRouter>
+        <BlueprintsPage />
+      </BrowserRouter>
+    )
+
+    expect(socketIoClient.createSocket).toHaveBeenCalled()
+    expect(mockSocket.on).toHaveBeenCalledWith('refresh-dashboard', expect.any(Function))
   })
 })
