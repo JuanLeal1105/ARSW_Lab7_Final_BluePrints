@@ -102,8 +102,23 @@ El sistema consta de tres componentes que deben ejecutarse en paralelo:
 ### **Video de muestra. Sockets Funcionando**
 [![Watch the demo](https://img.youtube.com/vi/TpXhPHqDAxg/0.jpg)](https://youtu.be/TpXhPHqDAxg)
 
-## **Parte 5. Pruebas y Aseguramiento de Calidad (Vitest)**
+## Parte 5. Pruebas y Aseguramiento de Calidad (Vitest)
 
+Se implementaron pruebas unitarias utilizando Vitest para validar los componentes críticos del sistema:
+
+- **Servicios REST (blueprintsService.js):**
+  Se mockeó Axios para validar las operaciones CRUD (GET, POST, PUT, DELETE) sin depender del backend.
+
+- **Estado Global (Redux):**
+  Se probó el reducer encargado de sincronizar los puntos (`syncBlueprintPoints`), garantizando la consistencia del estado.
+
+- **Componentes React:**
+  Se validó el renderizado de componentes clave como Canvas, páginas principales y modales.
+
+- **Canvas:**
+  Se mockeó el contexto de HTMLCanvasElement para evitar errores en entorno de testing.
+
+Estas pruebas aseguran la estabilidad del sistema, desacoplando dependencias externas y validando la lógica crítica del frontend.
 ## **Parte 6. Observabilidad y Seguridad**
 El microservicio de Node.js (server.js) implementa requisitos clave de grado producción:
 - Restricción de Orígenes (CORS): Se configuró explícitamente cors({ origin: ['http://localhost:5173'] }). El servidor rechaza cualquier conexión WebSocket que provenga de un dominio distinto al de nuestro frontend autorizado.
@@ -111,5 +126,58 @@ El microservicio de Node.js (server.js) implementa requisitos clave de grado pro
 - Validación de Payloads: Antes de emitir un punto al resto de usuarios, el servidor evalúa manualmente que el objeto exista y que x e y sean del tipo number. Si un atacante inyecta strings o scripts, el servidor lo aborta y lanza un log de advertencia [WARN].
 - Opcional (JWT): Aunque la autenticación fuerte se maneja en el CRUD de Spring Boot, la separación de responsabilidades permite mantener la latencia del dibujo al mínimo (sin validar firmas RSA por cada milisegundo de movimiento del cursor).
 
-## **Parte 7. Análisis: Socket.IO vs STOMP**
+## Parte 7. Análisis: Socket.IO vs STOMP
 
+Durante el desarrollo del laboratorio se evaluaron dos enfoques para la implementación de comunicación en tiempo real: **Socket.IO** y **STOMP sobre WebSockets**. A continuación, se presenta una comparación basada en criterios técnicos relevantes.
+
+### 1. Facilidad de implementación
+- **Socket.IO:** Presenta una integración sencilla en entornos JavaScript/Node.js. Su API es intuitiva y permite implementar eventos personalizados (`emit`, `on`) con pocas líneas de código.
+- **STOMP:** Requiere una configuración más compleja, especialmente en Spring Boot, donde es necesario definir brokers, endpoints y prefijos (`/app`, `/topic`).
+
+**Conclusión:** Socket.IO es más fácil y rápido de implementar.
+
+---
+
+### 2. Modelo de comunicación
+- **Socket.IO:** Basado en eventos y salas (*rooms*), lo que facilita el aislamiento por canal (por ejemplo, `blueprints.author.name`).
+- **STOMP:** Basado en un modelo de publicación/suscripción (pub/sub) con tópicos (`/topic/...`), más estructurado y estandarizado.
+
+**Conclusión:** STOMP ofrece un modelo más formal; Socket.IO es más flexible.
+
+---
+
+### 3. Latencia y rendimiento
+- **Socket.IO:** Tiene baja latencia y está optimizado para aplicaciones interactivas. Maneja reconexión automática y fallback a long-polling.
+- **STOMP:** Introduce una ligera sobrecarga debido al protocolo de mensajería, aunque sigue siendo eficiente para la mayoría de aplicaciones.
+
+**Conclusión:** Socket.IO presenta mejor rendimiento en escenarios altamente interactivos.
+
+---
+
+### 4. Escalabilidad
+- **Socket.IO:** Escala bien, pero requiere herramientas adicionales como Redis Adapter para entornos distribuidos.
+- **STOMP:** Diseñado para integrarse con brokers robustos (RabbitMQ, ActiveMQ), lo que facilita la escalabilidad horizontal.
+
+**Conclusión:** STOMP es más adecuado para sistemas distribuidos a gran escala.
+
+---
+
+### 5. Integración con backend
+- **Socket.IO:** No es nativo en Spring Boot, lo que obliga a usar un servidor adicional en Node.js.
+- **STOMP:** Está soportado directamente por Spring, permitiendo una integración más limpia en arquitecturas Java.
+
+**Conclusión:** STOMP se integra mejor en ecosistemas Java.
+
+---
+
+### 6. Caso de uso en el laboratorio
+Para este laboratorio se eligió **Socket.IO** debido a:
+- Rapidez de implementación.
+- Facilidad para manejar salas por plano.
+- Baja latencia en el dibujo en tiempo real.
+- Separación de responsabilidades (Spring → persistencia, Node → tiempo real).
+
+---
+
+### Conclusión general
+Socket.IO es ideal para aplicaciones colaborativas en tiempo real con requerimientos de baja latencia y desarrollo ágil. Por otro lado, STOMP es más adecuado para sistemas empresariales donde se requiere una arquitectura robusta, escalable y basada en estándares de mensajería.
